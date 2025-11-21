@@ -1,0 +1,45 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-dark text-light font-sans antialiased;
+  }
+
+  h1 {
+    @apply text-display text-light;
+  }
+
+  h2 {
+    @apply text-section text-light-90;
+  }
+
+  h4 {
+    @apply text-base font-semibold text-light;
+  }
+
+  p {
+    @apply text-body-lg text-gray-80;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-light text-dark-lighter px-6 py-3 rounded-md font-light text-sm hover:opacity-90 transition-opacity;
+  }
+
+  .input-field {
+    @apply bg-transparent border border-light-20 text-light px-4 py-3 rounded-md font-light placeholder:text-gray-50 focus:outline-none focus:border-light-60;
+  }
+
+  .card {
+    @apply bg-light-2 rounded-lg p-8 border border-light-10;
+  }
+
+  .badge {
+    @apply text-[11px] font-normal tracking-[1.5px] uppercase text-light-60 bg-light-5 px-3 py-1 rounded border border-light-10;
+  }
+}
