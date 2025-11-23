@@ -6,7 +6,7 @@ import { CopyResult } from '@/components/CopyResult'
 import type { CopyResult as CopyResultType } from '@/lib/copylab'
 
 export function GeneratorForm() {
-  const [result, setResult] = useState<CopyResultType | null>(null)
+  const [results, setResults] = useState<CopyResultType[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -21,7 +21,7 @@ export function GeneratorForm() {
       const response = await generateCopy(formData)
 
       if (response.success && response.data) {
-        setResult(response.data)
+        setResults(response.data)
       } else {
         setError(response.error || 'Failed to generate copy')
       }
@@ -119,17 +119,31 @@ export function GeneratorForm() {
           disabled={loading}
           className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {loading ? 'Generating...' : 'Generate Copy'}
+          {loading ? 'Generating 3 Variants...' : 'Generate Copy Variants'}
         </button>
 
         <p className="text-xs text-light-60 text-center font-light">
-          Uses 10 Laws • 10 Plays • 10 Voice Moves
+          Generates 3 variations • Different principle combinations
         </p>
       </form>
 
-      {result && (
+      {results.length > 0 && (
         <div className="mt-16">
-          <CopyResult result={result} />
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-light text-light-90 mb-2">Your Copy Variants</h2>
+            <p className="text-gray-80 font-light">3 variations with different conversion principles</p>
+          </div>
+
+          <div className="space-y-16">
+            {results.map((result, index) => (
+              <div key={index}>
+                <div className="flex items-center justify-center mb-8">
+                  <span className="badge">Variant {index + 1}</span>
+                </div>
+                <CopyResult result={result} variantNumber={index + 1} />
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

@@ -1,6 +1,6 @@
 'use server'
 
-import { generateCopy as generateCopyCore, FunnelStage, type GenerateParams } from '@/lib/copylab'
+import { generateVariations, FunnelStage, type GenerateParams } from '@/lib/copylab'
 
 export async function generateCopy(formData: FormData) {
   const product = formData.get('product') as string
@@ -22,8 +22,8 @@ export async function generateCopy(formData: FormData) {
   }
 
   try {
-    const result = await generateCopyCore(params)
-    return { success: true, data: result }
+    const results = await generateVariations(params, 3) // Generate 3 variants
+    return { success: true, data: results }
   } catch (error: any) {
     return { success: false, error: error.message }
   }

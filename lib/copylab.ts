@@ -289,3 +289,113 @@ export async function generateCopy(params: GenerateParams): Promise<CopyResult> 
 
   return result
 }
+
+export async function generateVariations(params: GenerateParams, count: number = 3): Promise<CopyResult[]> {
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  if (!apiKey) {
+    throw new Error('ANTHROPIC_API_KEY environment variable not set')
+  }
+
+  const anthropic = new Anthropic({ apiKey })
+
+  // Define different principle combinations for variations
+  const principleSets = [
+    // Variant 1: Default for funnel stage
+    selectPrinciples(params.funnel_stage),
+
+    // Variant 2: Specificity + Enemy Naming + Quiet Part Out Loud
+    { law: 'specificity', play: 'enemy_naming', voice: 'quiet_part_out_loud' },
+
+    // Variant 3: Identity Projection + Transformation Timeline + Admission Opener
+    { law: 'identity_projection', play: 'transformation_timeline', voice: 'admission_opener' },
+
+    // Variant 4: Risk Reversal + Future Precedent + Preemptive Objection
+    { law: 'risk_reversal', play: 'future_precedent', voice: 'preemptive_objection' },
+
+    // Variant 5: Identity + Enemy Naming + Preemptive
+    { law: 'identity_projection', play: 'enemy_naming', voice: 'preemptive_objection' },
+  ]
+
+  const results: CopyResult[] = []
+
+  for (let i = 0; i < Math.min(count, principleSets.length); i++) {
+    const principles = principleSets[i]
+
+    // Build custom prompt with specific principles
+    const customPrompt = buildCustomPrompt(params, principles)
+
+    const message = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1500,
+      temperature: 0.7 + (i * 0.1), // Slight temperature variation for diversity
+      system: CLAUDE_SYSTEM_PROMPT,
+      messages: [{ role: 'user', content: customPrompt }],
+    })
+
+    const result = parseResponse(message.content)
+    result.principles_used = principles
+    results.push(result)
+  }
+
+  return results
+}
+
+function buildCustomPrompt(params: GenerateParams, principles: { law: string; play: string; voice: string }): string {
+  const brandVoice = params.brand_voice || 'direct, helpful, conversational'
+  const objective = params.objective || 'Get them interested'
+
+  return `Generate high-converting copy for this context:
+
+PRODUCT: ${params.product}
+AUDIENCE: ${params.audience}
+FUNNEL STAGE: ${params.funnel_stage}
+BRAND VOICE: ${brandVoice}
+OBJECTIVE: ${objective}
+
+APPLY THESE SPECIFIC PRINCIPLES:
+
+1. LAW - ${principles.law.toUpperCase()}
+${getPrincipleDefinition('laws', principles.law)}
+
+2. PLAY - ${principles.play.toUpperCase()}
+${getPrincipleDefinition('plays', principles.play)}
+
+3. VOICE - ${principles.voice.toUpperCase()}
+${getPrincipleDefinition('voice', principles.voice)}
+
+REQUIREMENTS:
+- Every benefit must include a specific number or timeframe
+- Include at least one "lived detail" (something only a real user would know)
+- Reference a specific moment of transformation or relief
+- Address the primary objection for this audience
+- End with urgency that feels real, not manufactured
+
+GENERATE:
+
+1. PRIMARY HEADLINE (8-12 words)
+Apply the LAW principle. Include specific number or timeframe.
+
+2. SUBHEADLINE (15-20 words)
+Apply the PLAY principle. Add context or agitation.
+
+3. BODY COPY (3-4 sentences, 40-60 words)
+Stack all three principles. Include:
+- Specific transformation moment
+- Lived detail or physical sensation
+- Social proof or identity marker
+
+4. CTA BUTTON (2-5 words)
+Apply urgency or micro-commitment.
+
+5. ALTERNATIVE HEADLINE (Testing variant)
+Different angle, same principles.
+
+FORMAT OUTPUT AS:
+HEADLINE: [text]
+SUBHEAD: [text]
+BODY: [text]
+CTA: [text]
+ALT HEADLINE: [text]
+
+Then provide brief explanation of principle application.`
+}

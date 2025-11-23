@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import type { CopyResult as CopyResultType } from '@/lib/copylab'
 
-export function CopyResult({ result }: { result: CopyResultType }) {
+export function CopyResult({ result, variantNumber }: { result: CopyResultType; variantNumber?: number }) {
   const [copied, setCopied] = useState<string | null>(null)
 
   async function copyToClipboard(text: string, label: string) {
@@ -12,12 +12,15 @@ export function CopyResult({ result }: { result: CopyResultType }) {
     setTimeout(() => setCopied(null), 2000)
   }
 
+  const variantId = variantNumber ? `-v${variantNumber}` : ''
+
   return (
-    <div className="space-y-8">
-      <div className="text-center mb-12">
-        <h2 className="text-4xl font-light text-light-90 mb-2">Your Copy</h2>
-        <p className="text-gray-80 font-light">Generated using proven conversion principles</p>
-      </div>
+    <div className="space-y-8">{!variantNumber && (
+        <div className="text-center mb-12">
+          <h2 className="text-4xl font-light text-light-90 mb-2">Your Copy</h2>
+          <p className="text-gray-80 font-light">Generated using proven conversion principles</p>
+        </div>
+      )}
 
       {/* Headline */}
       <div className="card border-l-2 border-light">
@@ -26,10 +29,10 @@ export function CopyResult({ result }: { result: CopyResultType }) {
             Primary Headline
           </h3>
           <button
-            onClick={() => copyToClipboard(result.headline, 'headline')}
+            onClick={() => copyToClipboard(result.headline, `headline${variantId}`)}
             className="text-xs text-light hover:text-light-90 font-light transition-colors"
           >
-            {copied === 'headline' ? '✓ Copied' : 'Copy'}
+            {copied === `headline${variantId}` ? '✓ Copied' : 'Copy'}
           </button>
         </div>
         <p className="text-3xl font-light text-light leading-tight">
@@ -44,10 +47,10 @@ export function CopyResult({ result }: { result: CopyResultType }) {
             Subheadline
           </h3>
           <button
-            onClick={() => copyToClipboard(result.subhead, 'subhead')}
+            onClick={() => copyToClipboard(result.subhead, `subhead${variantId}`)}
             className="text-xs text-light hover:text-light-90 font-light transition-colors"
           >
-            {copied === 'subhead' ? '✓ Copied' : 'Copy'}
+            {copied === `subhead${variantId}` ? '✓ Copied' : 'Copy'}
           </button>
         </div>
         <p className="text-xl font-light text-gray-80 leading-relaxed">
@@ -62,10 +65,10 @@ export function CopyResult({ result }: { result: CopyResultType }) {
             Body Copy
           </h3>
           <button
-            onClick={() => copyToClipboard(result.body, 'body')}
+            onClick={() => copyToClipboard(result.body, `body${variantId}`)}
             className="text-xs text-light hover:text-light-90 font-light transition-colors"
           >
-            {copied === 'body' ? '✓ Copied' : 'Copy'}
+            {copied === `body${variantId}` ? '✓ Copied' : 'Copy'}
           </button>
         </div>
         <p className="text-base font-light text-gray-80 leading-relaxed">
@@ -80,10 +83,10 @@ export function CopyResult({ result }: { result: CopyResultType }) {
             Call to Action
           </h3>
           <button
-            onClick={() => copyToClipboard(result.cta, 'cta')}
+            onClick={() => copyToClipboard(result.cta, `cta${variantId}`)}
             className="text-xs text-light hover:text-light-90 font-light transition-colors"
           >
-            {copied === 'cta' ? '✓ Copied' : 'Copy'}
+            {copied === `cta${variantId}` ? '✓ Copied' : 'Copy'}
           </button>
         </div>
         <button className="btn-primary">
@@ -98,10 +101,10 @@ export function CopyResult({ result }: { result: CopyResultType }) {
             Alternative Headline (A/B Test)
           </h3>
           <button
-            onClick={() => copyToClipboard(result.alt_headline, 'alt')}
+            onClick={() => copyToClipboard(result.alt_headline, `alt${variantId}`)}
             className="text-xs text-light hover:text-light-90 font-light transition-colors"
           >
-            {copied === 'alt' ? '✓ Copied' : 'Copy'}
+            {copied === `alt${variantId}` ? '✓ Copied' : 'Copy'}
           </button>
         </div>
         <p className="text-3xl font-light text-light leading-tight">
@@ -132,11 +135,11 @@ export function CopyResult({ result }: { result: CopyResultType }) {
         <button
           onClick={() => {
             const allCopy = `HEADLINE:\n${result.headline}\n\nSUBHEAD:\n${result.subhead}\n\nBODY:\n${result.body}\n\nCTA:\n${result.cta}\n\nALT HEADLINE:\n${result.alt_headline}`
-            copyToClipboard(allCopy, 'all')
+            copyToClipboard(allCopy, `all${variantId}`)
           }}
           className="btn-primary px-12"
         >
-          {copied === 'all' ? '✓ Copied All' : 'Copy All to Clipboard'}
+          {copied === `all${variantId}` ? '✓ Copied All' : 'Copy All to Clipboard'}
         </button>
       </div>
     </div>
