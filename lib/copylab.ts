@@ -67,8 +67,8 @@ const PRINCIPLE_DEFINITIONS = {
   laws: {
     specificity: `
 Replace vague benefits with exact moments and numbers.
-- Use non-rounded numbers (12 seconds, not 10)
-- Include exact timeframes (Day 3, Week 2, 3:47 pm)
+- Use non-rounded numbers (7 seconds, 23 hours, 91 days - never round to 10, 20, 90)
+- Include exact timeframes (Day 3, Week 2, Month 4, 2:14 pm, 9:37 am)
 - Describe observable transformation moments
 Example: "Day 3: redness fades. Day 7: texture smooths. Day 14: your mother asks what changed."
 `,

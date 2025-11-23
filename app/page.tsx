@@ -1,6 +1,22 @@
+'use client'
+
+import { useState } from 'react'
 import { GeneratorForm } from '@/components/GeneratorForm'
+import { HeroExample } from '@/components/HeroExample'
+
+interface FormData {
+  product: string
+  audience: string
+  stage: string
+}
 
 export default function Home() {
+  const [prefillData, setPrefillData] = useState<FormData | undefined>()
+
+  const handleTryExample = (data: FormData) => {
+    setPrefillData(data)
+  }
+
   return (
     <main className="min-h-screen bg-dark">
       {/* Header */}
@@ -32,6 +48,9 @@ export default function Home() {
           No guessing. No generic AI fluff.
         </p>
 
+        {/* Live Example Carousel */}
+        <HeroExample onTryExample={handleTryExample} />
+
         {/* Stats */}
         <div className="flex items-center justify-center space-x-8 text-sm font-light text-light-60 mb-16">
           <div className="flex items-center space-x-2">
@@ -51,7 +70,7 @@ export default function Home() {
 
       {/* Generator Section */}
       <section className="max-w-[800px] mx-auto px-8 pb-32">
-        <GeneratorForm />
+        <GeneratorForm prefillData={prefillData} />
       </section>
 
       {/* Principles Section */}

@@ -1,19 +1,45 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { generateCopy } from '@/app/actions'
 import { CopyResult } from '@/components/CopyResult'
+import { GenerationProgress } from '@/components/GenerationProgress'
 import type { CopyResult as CopyResultType } from '@/lib/copylab'
 
-export function GeneratorForm() {
+interface FormData {
+  product: string
+  audience: string
+  stage: string
+}
+
+interface GeneratorFormProps {
+  prefillData?: FormData
+}
+
+export function GeneratorForm({ prefillData }: GeneratorFormProps) {
   const [results, setResults] = useState<CopyResultType[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showProgress, setShowProgress] = useState(false)
+
+  // Pre-fill form when prefillData changes
+  useEffect(() => {
+    if (prefillData) {
+      const productInput = document.getElementById('product') as HTMLInputElement
+      const audienceInput = document.getElementById('audience') as HTMLInputElement
+      const stageSelect = document.getElementById('stage') as HTMLSelectElement
+
+      if (productInput) productInput.value = prefillData.product
+      if (audienceInput) audienceInput.value = prefillData.audience
+      if (stageSelect) stageSelect.value = prefillData.stage
+    }
+  }, [prefillData])
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setLoading(true)
     setError(null)
+    setShowProgress(true)
 
     const formData = new FormData(e.currentTarget)
 
@@ -24,16 +50,22 @@ export function GeneratorForm() {
         setResults(response.data)
       } else {
         setError(response.error || 'Failed to generate copy')
+        setShowProgress(false)
       }
     } catch (err: any) {
       setError(err.message || 'Something went wrong')
+      setShowProgress(false)
     } finally {
       setLoading(false)
     }
   }
 
+  function handleProgressComplete() {
+    setShowProgress(false)
+  }
+
   return (
-    <div className="w-full">
+    <div className="w-full" id="generator-form">
       <form onSubmit={handleSubmit} className="space-y-6 card">
         <div>
           <label htmlFor="product" className="block text-sm font-light text-light-60 mb-2">
@@ -127,7 +159,14 @@ export function GeneratorForm() {
         </p>
       </form>
 
-      {results.length > 0 && (
+      {/* Progress Display */}
+      {loading && showProgress && (
+        <div className="mt-16">
+          <GenerationProgress variantCount={3} onComplete={handleProgressComplete} />
+        </div>
+      )}
+
+      {results.length > 0 && !loading && (
         <div className="mt-16">
           <div className="text-center mb-12">
             <h2 className="text-4xl font-light text-light-90 mb-2">Your Copy Variants</h2>
