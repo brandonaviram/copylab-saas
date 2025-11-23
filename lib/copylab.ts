@@ -228,6 +228,7 @@ Then provide brief explanation of principle application.`
 }
 
 function parseResponse(content: any[]): CopyResult {
+  // 1. Extract text from content blocks
   let text = ''
   for (const block of content) {
     if (block.type === 'text') {
@@ -235,6 +236,7 @@ function parseResponse(content: any[]): CopyResult {
     }
   }
 
+  // 2. Initialize result
   const result: CopyResult = {
     headline: '',
     subhead: '',
@@ -242,26 +244,66 @@ function parseResponse(content: any[]): CopyResult {
     cta: '',
     alt_headline: '',
     principles_used: { law: '', play: '', voice: '' },
-    explanation: '',
+    explanation: text,
+  }
+
+  // 3. State-tracking parser
+  let currentField: string | null = null
+  let currentContent: string[] = []
+
+  const saveField = () => {
+    if (currentField && currentContent.length > 0) {
+      const content = currentContent.join('\n').trim()
+      if (currentField === 'headline') result.headline = content
+      else if (currentField === 'subhead') result.subhead = content
+      else if (currentField === 'body') result.body = content
+      else if (currentField === 'cta') result.cta = content
+      else if (currentField === 'alt_headline') result.alt_headline = content
+    }
   }
 
   const lines = text.split('\n')
   for (const line of lines) {
     const trimmed = line.trim()
+
+    // Check for label
     if (trimmed.startsWith('HEADLINE:')) {
-      result.headline = trimmed.replace('HEADLINE:', '').trim()
+      saveField()
+      currentField = 'headline'
+      currentContent = [trimmed.replace('HEADLINE:', '').trim()]
     } else if (trimmed.startsWith('SUBHEAD:')) {
-      result.subhead = trimmed.replace('SUBHEAD:', '').trim()
+      saveField()
+      currentField = 'subhead'
+      currentContent = [trimmed.replace('SUBHEAD:', '').trim()]
     } else if (trimmed.startsWith('BODY:')) {
-      result.body = trimmed.replace('BODY:', '').trim()
+      saveField()
+      currentField = 'body'
+      currentContent = [trimmed.replace('BODY:', '').trim()]
     } else if (trimmed.startsWith('CTA:')) {
-      result.cta = trimmed.replace('CTA:', '').trim()
+      saveField()
+      currentField = 'cta'
+      currentContent = [trimmed.replace('CTA:', '').trim()]
     } else if (trimmed.startsWith('ALT HEADLINE:')) {
-      result.alt_headline = trimmed.replace('ALT HEADLINE:', '').trim()
+      saveField()
+      currentField = 'alt_headline'
+      currentContent = [trimmed.replace('ALT HEADLINE:', '').trim()]
+    } else if (currentField && trimmed) {
+      // Accumulate content for current field
+      currentContent.push(trimmed)
     }
   }
 
-  result.explanation = text
+  // Save final field
+  saveField()
+
+  // 4. Validate required fields
+  if (!result.headline || !result.body || !result.cta) {
+    console.warn('Parse warning: Missing required fields', {
+      headline: !!result.headline,
+      body: !!result.body,
+      cta: !!result.cta,
+    })
+  }
 
   return result
 }
@@ -316,25 +358,113 @@ export async function generateVariations(params: GenerateParams, count: number =
     { law: 'identity_projection', play: 'enemy_naming', voice: 'preemptive_objection' },
   ]
 
-  const results: CopyResult[] = []
+  // Create all API call promises immediately (parallel execution)
+  const variantPromises = []
 
   for (let i = 0; i < Math.min(count, principleSets.length); i++) {
     const principles = principleSets[i]
-
-    // Build custom prompt with specific principles
     const customPrompt = buildCustomPrompt(params, principles)
 
-    const message = await anthropic.messages.create({
+    // Push promise to array - API call starts immediately
+    const promise = anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 1500,
       temperature: 0.7 + (i * 0.1), // Slight temperature variation for diversity
       system: CLAUDE_SYSTEM_PROMPT,
       messages: [{ role: 'user', content: customPrompt }],
-    })
+    }).then(message => ({
+      message,
+      principles,
+      index: i,
+    })).catch((error: any) => ({
+      error,
+      principles,
+      index: i,
+    }))
 
-    const result = parseResponse(message.content)
-    result.principles_used = principles
-    results.push(result)
+    variantPromises.push(promise)
+  }
+
+  // Wait for ALL promises to settle (success or failure)
+  const settledResults = await Promise.allSettled(variantPromises)
+
+  // Process results
+  const results: CopyResult[] = []
+  const errors: Array<{ index: number; error: string; type: string }> = []
+
+  for (const settled of settledResults) {
+    if (settled.status === 'fulfilled') {
+      const { message, principles, index, error } = settled.value as any
+
+      if (error) {
+        // Type-specific error handling
+        let errorType = 'unknown'
+        let errorMessage = 'Unknown error'
+
+        if (error.constructor.name === 'RateLimitError') {
+          errorType = 'rate_limit'
+          errorMessage = 'Rate limit exceeded'
+        } else if (error.constructor.name === 'AuthenticationError') {
+          // Auth errors should abort immediately
+          throw new Error('API authentication failed. Check your API key.')
+        } else if (error.constructor.name === 'APIError') {
+          errorType = 'api_error'
+          errorMessage = 'API request failed'
+        } else if (error.message) {
+          errorMessage = error.message
+        }
+
+        errors.push({
+          index: index + 1,
+          error: errorMessage,
+          type: errorType,
+        })
+        console.error(`Variant ${index + 1} failed:`, errorMessage)
+        continue
+      }
+
+      try {
+        const result = parseResponse(message.content)
+
+        // Validate required fields
+        if (!result.headline || !result.body || !result.cta) {
+          throw new Error('Missing required fields in parsed response')
+        }
+
+        result.principles_used = principles
+        results.push(result)
+      } catch (parseError: any) {
+        errors.push({
+          index: index + 1,
+          error: `Parse error: ${parseError.message}`,
+          type: 'parse_error',
+        })
+        console.error(`Variant ${index + 1} parse failed:`, parseError)
+      }
+    } else {
+      // Promise was rejected
+      errors.push({
+        index: -1,
+        error: settled.reason?.message || 'Unknown error',
+        type: 'unknown',
+      })
+      console.error('Variant failed:', settled.reason)
+    }
+  }
+
+  // If all failed, throw
+  if (results.length === 0) {
+    throw new Error(
+      `All ${count} variants failed. Errors: ${errors.map(e => e.error).join(', ')}`
+    )
+  }
+
+  // If some failed, log warning
+  if (errors.length > 0) {
+    console.warn(
+      `Partial success: ${results.length} of ${count} variants generated.`,
+      errors
+    )
   }
 
   return results
